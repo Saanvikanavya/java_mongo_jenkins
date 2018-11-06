@@ -11,5 +11,10 @@ pipeline {
         sh 'jmeter -n -t test-mongo.jmx -l test.jtl'
       }
     }
+    stage('view_jtl') {
+      steps {
+        sh 'cat test.jtl'
+      }
+    }
   }
 }
