@@ -1,0 +1,363 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jmeterTestPlan version="1.2" properties="4.0" jmeter="4.0 r1823414">
+  <hashTree>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="mongo-test" enabled="true">
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <stringProp name="TestPlan.comments"></stringProp>
+      <boolProp name="TestPlan.serialize_threadgroups">false</boolProp>
+      <stringProp name="TestPlan.user_define_classpath"></stringProp>
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" enabled="true">
+        <collectionProp name="Arguments.arguments">
+          <elementProp name="solution" elementType="Argument">
+            <stringProp name="Argument.name">solution</stringProp>
+            <stringProp name="Argument.value">testsol2_6acd9802-eea3-43ad-a4e9-f8cd2d99094b</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="url" elementType="Argument">
+            <stringProp name="Argument.name">url</stringProp>
+            <stringProp name="Argument.value">api.hs-stg1.stack.ciox.stg.xpms.ai</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="my_job_id" elementType="Argument">
+            <stringProp name="Argument.name">my_job_id</stringProp>
+            <stringProp name="Argument.value">cfc4f0aa-36bb-4d82-a408-318278aeb6a7</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="file_name" elementType="Argument">
+            <stringProp name="Argument.name">file_name</stringProp>
+            <stringProp name="Argument.value">interimtimes-${__time(yyyy_MM_dd_HH_MM_ss,)}.csv</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+        </collectionProp>
+      </elementProp>
+    </TestPlan>
+    <hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Thread Group" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">5</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+      </ThreadGroup>
+      <hashTree>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="JSR223 Sampler" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">import org.bson.Document;
+
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.Date;
+import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
+
+import com.mongodb.MongoClient;
+import com.mongodb.MongoClientURI;
+import com.mongodb.BasicDBObject;
+import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.Projections;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoCursor;
+
+          MongoClientURI uri = new MongoClientURI(&quot;mongodb://admin:passw0rd@10.32.102.175:27017/?authSource=admin&amp;authMechanism=SCRAM-SHA-1&quot;);
+		MongoClient mongoClient = new MongoClient(uri);
+		System.out.println(&quot;Connected to the database successfully&quot;);
+		MongoDatabase database = mongoClient.getDatabase(&quot;ciox&quot;);
+		System.out.println(&quot;ciox database connected&quot;);
+		MongoCollection coll = database.getCollection(&quot;pipeline_data&quot;);
+		System.out.println(&quot;Got the pipeline_data collection&quot;);
+
+		MongoDatabase database2 = mongoClient.getDatabase(&quot;entity_data&quot;);
+		System.out.println(&quot;entity_data database connected&quot;);
+		MongoCollection coll2 = database2.getCollection(&quot;document_documents&quot;);
+		System.out.println(&quot;Got the document_documents collection&quot;);
+		
+		MongoDatabase database3 = mongoClient.getDatabase(&quot;admin&quot;);
+		System.out.println(&quot;admin database connected&quot;);
+		MongoCollection coll3 = database3.getCollection(&quot;job_details&quot;);
+		System.out.println(&quot;Got the job_details collection&quot;);
+		
+		// get a particular document in collection
+		BasicDBObject whereQuery = new BasicDBObject();
+		System.out.println(&quot;jobid=${my_job_id}&quot;);
+		// query parameters
+		whereQuery.put(&quot;original_request_id&quot;, &quot;${my_job_id}&quot;);
+		whereQuery.put(&quot;request_state.status&quot;, &quot;publishing to ocr pipeline&quot;);
+		MongoCursor cursor = coll.find(whereQuery).projection(Projections.include(&quot;request_state.payload.metadata.doc_id&quot;)).projection(Projections.exclude(&quot;_id&quot;)).iterator();
+		
+		String filename = &quot;${file_name}&quot;;
+		FileWriter fstream = new FileWriter(filename,true);
+		BufferedWriter bout = new BufferedWriter(fstream);
+		File file =new File(filename);
+		MongoCursor cursor2 = null;
+		MongoCursor cursor3 = null;
+		try {
+			Document doc = (Document) cursor.next();
+			List&lt;Document&gt; courses = (List&lt;Document&gt;) doc.get(&quot;request_state&quot;);
+			String my_doc_id = &quot;&quot;;
+			for (Document course : courses) {
+				if (course.getString(&quot;status&quot;).equalsIgnoreCase(&quot;Received response from ocr pipeline&quot;))
+					my_doc_id = course.get(&quot;payload&quot;, Document.class).get(&quot;metadata&quot;)
+							.getString(&quot;doc_id&quot;);
+
+			}
+			System.out.println(&quot;Document Id = &quot; + my_doc_id);
+
+			// get request ids for all operations on that doc
+			BasicDBObject whereQuery2 = new BasicDBObject();
+			// query parameters
+			whereQuery2.put(&quot;doc_id&quot;, my_doc_id);
+			// projections parameters
+			cursor2 = coll2.find(whereQuery2).projection(Projections.include(&quot;request_info&quot;))
+					.projection(Projections.exclude(&quot;_id&quot;)).iterator();
+			Document reqArray = ((Document) cursor2.next()).get(&quot;request_info&quot;);
+			String ingest_reqid = ((Document) reqArray.get(&quot;convert_document&quot;).get(0))
+					.getString(&quot;request_id&quot;);
+			System.out.println(&quot;ingest_reqId = &quot; + ingest_reqid);
+			
+			String deskew_reqid = ((Document) reqArray.get(&quot;deskew_document&quot;).get(0))
+					.getString(&quot;request_id&quot;);
+			System.out.println(&quot;deskew_reqId = &quot; + deskew_reqid);
+			
+			String extract_hocr_reqid = ((Document) reqArray.get(&quot;extract_document_hocr&quot;).get(0))
+					.getString(&quot;request_id&quot;);
+			System.out.println(&quot;extract_hocr_reqId = &quot; + extract_hocr_reqid);
+			
+			String extract_metadata_reqid = ((Document) reqArray.get(&quot;extract_document_metadata&quot;).get(0))
+					.getString(&quot;request_id&quot;);
+			System.out.println(&quot;extract_metadata_reqId = &quot; + extract_metadata_reqid);
+				
+			if (file.length() == 0){ 
+				System.out.println(&quot;size of the file&quot; + file.length()); 
+				bout.write(&quot;JOB_ID,&quot;);
+				bout.write(&quot;Ingest time,&quot;);
+				bout.write(&quot;Deskew time,&quot;);
+				bout.write(&quot;hocr time,&quot;);
+				bout.write(&quot;Metadata time\n&quot;); 
+				bout.flush();
+			}
+			 
+
+			// writing actual data into csv file
+			// bout.write(&quot;cfc4f0aa-36bb-4d82-a408-318278aeb6a7,&quot;);
+			/*
+			 * LocalDateTime initTime =
+			 * LocalDateTime.parse(courses.get(0).getString(&quot;cts&quot;)); for (int i = 1; i &lt;
+			 * courses.size() - 1; i++) { if (null != courses.get(i).getString(&quot;ts&quot;)){
+			 * LocalDateTime startDate =
+			 * LocalDateTime.parse(courses.get(i).getString(&quot;cts&quot;)); LocalDateTime finalDate
+			 * = LocalDateTime.parse(courses.get(i).getString(&quot;ts&quot;)); long time_in_msecs =
+			 * startDate.until(finalDate, ChronoUnit.MILLIS);
+			 * System.out.println(&quot;Time took for &quot; +
+			 * courses.get(i).getString(&quot;expected_response&quot;) + &quot; = &quot; + time_in_msecs +
+			 * &quot;ms&quot;); System.out.println(&quot;\n&quot;); //bout.write(String.valueOf(time_in_msecs)
+			 * +&quot;,&quot;); } } LocalDateTime endTime =
+			 * LocalDateTime.parse(courses.get(courses.size() - 1).getString(&quot;cts&quot;)); long
+			 * totaltime = initTime.until(endTime, ChronoUnit.MILLIS);
+			 * System.out.println(&quot;Total time took  in ms= &quot; + totaltime);
+			 */
+			// bout.write(String.valueOf(totaltime));
+			// bout.write(&quot;\n&quot;);
+			BasicDBObject whereQuery3 = new BasicDBObject();
+			// query parameters
+			whereQuery3.put(&quot;job_id&quot;, ingest_reqid);
+			// projections parameters
+			cursor3 = coll3.find(whereQuery3).projection(Projections.include(&quot;response_time&quot;)).projection(Projections.include(&quot;request_time&quot;)).projection(Projections.exclude(&quot;_id&quot;)).iterator();
+			
+			Document ingestDoc = (Document)cursor3.next();
+			LocalDateTime ingestendTime = ingestDoc.getDate(&quot;response_time&quot;).toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
+			LocalDateTime ingestStartTime = ingestDoc.getDate(&quot;request_time&quot;).toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
+			
+			long ingest_time_in_msecs =
+					 ingestStartTime.until(ingestendTime, ChronoUnit.MILLIS);
+			System.out.println(&quot;ingest time = &quot;+ ingest_time_in_msecs);
+
+			whereQuery3.replace(&quot;job_id&quot;, deskew_reqid);
+			cursor3 = coll3.find(whereQuery3)
+					.projection(Projections.include(&quot;response_time&quot;))
+					.projection(Projections.include(&quot;request_time&quot;))
+					.projection(Projections.exclude(&quot;_id&quot;)).iterator();
+			Document deskewDoc = (Document)cursor3.next();
+			LocalDateTime deskewendTime = deskewDoc.getDate(&quot;response_time&quot;).toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
+			LocalDateTime deskewStartTime = deskewDoc.getDate(&quot;request_time&quot;).toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();;
+			
+			long deskew_time_in_msecs =
+					 deskewStartTime.until(deskewendTime, ChronoUnit.MILLIS);
+			System.out.println(&quot;deskew time = &quot;+ deskew_time_in_msecs);
+			
+			whereQuery3.replace(&quot;job_id&quot;, extract_hocr_reqid);
+			cursor3 = coll3.find(whereQuery3)
+					.projection(Projections.include(&quot;response_time&quot;))
+					.projection(Projections.include(&quot;request_time&quot;))
+					.projection(Projections.exclude(&quot;_id&quot;)).iterator();
+			Document hocrDoc = (Document)cursor3.next();
+			LocalDateTime hocrendTime = hocrDoc.getDate(&quot;response_time&quot;).toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
+			LocalDateTime hocrStartTime = hocrDoc.getDate(&quot;request_time&quot;).toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();;
+			
+			long hocr_time_in_msecs =
+					 hocrStartTime.until(hocrendTime, ChronoUnit.MILLIS);
+			System.out.println(&quot;hocr time = &quot;+ hocr_time_in_msecs);
+			
+			whereQuery3.replace(&quot;job_id&quot;, extract_metadata_reqid);
+			cursor3 = coll3.find(whereQuery3)
+					.projection(Projections.include(&quot;response_time&quot;))
+					.projection(Projections.include(&quot;request_time&quot;))
+					.projection(Projections.exclude(&quot;_id&quot;)).iterator();
+			Document metadataDoc = (Document)cursor3.next();
+			LocalDateTime metadataendTime = metadataDoc.getDate(&quot;response_time&quot;).toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
+			LocalDateTime metadataStartTime = metadataDoc.getDate(&quot;request_time&quot;).toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();;
+			
+			long metadata_time_in_msecs =
+					 metadataStartTime.until(metadataendTime, ChronoUnit.MILLIS);
+			System.out.println(&quot;metadata time = &quot;+ metadata_time_in_msecs);
+			bout.write(&quot;${my_job_id},&quot;);
+			bout.write(ingest_time_in_msecs+&quot;,&quot;);
+			bout.write(deskew_time_in_msecs+&quot;,&quot;);
+			bout.write(hocr_time_in_msecs+&quot;,&quot;);
+			bout.write(metadata_time_in_msecs+&quot;\n&quot;);
+		} catch (Exception e) {
+			e.printStackTrace();
+			
+		} finally {
+			cursor.close();
+			cursor2.close();
+			cursor3.close();
+			mongoClient.close();
+			bout.close();
+			fstream.close();
+		}</stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="JSR223 Sampler" enabled="false">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">&quot;sh ocrevalutf8 --help&quot;.execute().text;</stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+        <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector" testname="View Results Tree" enabled="true">
+          <boolProp name="ResultCollector.error_logging">false</boolProp>
+          <objProp>
+            <name>saveConfig</name>
+            <value class="SampleSaveConfiguration">
+              <time>true</time>
+              <latency>true</latency>
+              <timestamp>true</timestamp>
+              <success>true</success>
+              <label>true</label>
+              <code>true</code>
+              <message>true</message>
+              <threadName>true</threadName>
+              <dataType>true</dataType>
+              <encoding>false</encoding>
+              <assertions>true</assertions>
+              <subresults>true</subresults>
+              <responseData>false</responseData>
+              <samplerData>false</samplerData>
+              <xml>false</xml>
+              <fieldNames>true</fieldNames>
+              <responseHeaders>false</responseHeaders>
+              <requestHeaders>false</requestHeaders>
+              <responseDataOnError>false</responseDataOnError>
+              <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
+              <assertionsResultsToSave>0</assertionsResultsToSave>
+              <bytes>true</bytes>
+              <sentBytes>true</sentBytes>
+              <threadCounts>true</threadCounts>
+              <idleTime>true</idleTime>
+              <connectTime>true</connectTime>
+            </value>
+          </objProp>
+          <stringProp name="filename"></stringProp>
+        </ResultCollector>
+        <hashTree/>
+        <ResultCollector guiclass="StatVisualizer" testclass="ResultCollector" testname="Aggregate Report" enabled="true">
+          <boolProp name="ResultCollector.error_logging">false</boolProp>
+          <objProp>
+            <name>saveConfig</name>
+            <value class="SampleSaveConfiguration">
+              <time>true</time>
+              <latency>true</latency>
+              <timestamp>true</timestamp>
+              <success>true</success>
+              <label>true</label>
+              <code>true</code>
+              <message>true</message>
+              <threadName>true</threadName>
+              <dataType>true</dataType>
+              <encoding>false</encoding>
+              <assertions>true</assertions>
+              <subresults>true</subresults>
+              <responseData>false</responseData>
+              <samplerData>false</samplerData>
+              <xml>false</xml>
+              <fieldNames>true</fieldNames>
+              <responseHeaders>false</responseHeaders>
+              <requestHeaders>false</requestHeaders>
+              <responseDataOnError>false</responseDataOnError>
+              <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
+              <assertionsResultsToSave>0</assertionsResultsToSave>
+              <bytes>true</bytes>
+              <sentBytes>true</sentBytes>
+              <threadCounts>true</threadCounts>
+              <idleTime>true</idleTime>
+              <connectTime>true</connectTime>
+            </value>
+          </objProp>
+          <stringProp name="filename"></stringProp>
+        </ResultCollector>
+        <hashTree/>
+        <ResultCollector guiclass="SummaryReport" testclass="ResultCollector" testname="Summary Report" enabled="true">
+          <boolProp name="ResultCollector.error_logging">false</boolProp>
+          <objProp>
+            <name>saveConfig</name>
+            <value class="SampleSaveConfiguration">
+              <time>true</time>
+              <latency>true</latency>
+              <timestamp>true</timestamp>
+              <success>true</success>
+              <label>true</label>
+              <code>true</code>
+              <message>true</message>
+              <threadName>true</threadName>
+              <dataType>true</dataType>
+              <encoding>false</encoding>
+              <assertions>true</assertions>
+              <subresults>true</subresults>
+              <responseData>false</responseData>
+              <samplerData>false</samplerData>
+              <xml>false</xml>
+              <fieldNames>true</fieldNames>
+              <responseHeaders>false</responseHeaders>
+              <requestHeaders>false</requestHeaders>
+              <responseDataOnError>false</responseDataOnError>
+              <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
+              <assertionsResultsToSave>0</assertionsResultsToSave>
+              <bytes>true</bytes>
+              <sentBytes>true</sentBytes>
+              <threadCounts>true</threadCounts>
+              <idleTime>true</idleTime>
+              <connectTime>true</connectTime>
+            </value>
+          </objProp>
+          <stringProp name="filename"></stringProp>
+        </ResultCollector>
+        <hashTree/>
+      </hashTree>
+    </hashTree>
+  </hashTree>
+</jmeterTestPlan>
